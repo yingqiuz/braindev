@@ -24,6 +24,7 @@ def prepare(df,name=None,Y=None,deconfound=False,normalise=True,exclude=None):
         if np.count_nonzero(nan_check) > 0:
             print("Warning: NaNs found in the data; cleaning those up...")
             Y = Y[~nan_check]
+
     b = np.array(df['age_birth'][~nan_check])
     s = np.array(df['age_scan'][~nan_check])
     if deconfound:
