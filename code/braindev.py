@@ -3,18 +3,19 @@
 import numpy as np
 from mh import *
 
-def regress_out(Y,conf):    
+def regress_out(Y, conf):    
     mean = Y.mean()
     Y    = Y-mean
     conf = np.array(conf)
     conf = conf-np.mean(conf,axis=0)
-    from sklearn.linear_model import LinearRegression
-    reg = LinearRegression(fit_intercept=True, normalize=False).fit(conf, Y)
-    Y = Y - reg.predict(conf) + mean #reg.intercept_    
+    if conf.ndim == 1:
+        conf = conf.reshape(-1, 1)
+    beta = np.linalg.pinv(conf).dot(Y)
+    Y = Y - conf * beta + mean #reg.intercept_    
     return Y
 
 # Prepare data
-def prepare(df,name=None,Y=None,deconfound=False,normalise=True,exclude=None):
+def prepare(df,name=None,Y=None,deconfound=None,normalise=True,exclude=None):
     if exclude is not None:
         df.drop(df.index[exclude])
     # Data and regressors
@@ -27,9 +28,9 @@ def prepare(df,name=None,Y=None,deconfound=False,normalise=True,exclude=None):
 
     b = np.array(df['age_birth'][~nan_check])
     s = np.array(df['age_scan'][~nan_check])
-    if deconfound:
+    if deconfound is not None:
         # Confounds
-        conf = df[['weight_birth']]  # For struct data
+        conf = np.array(df[deconfound])  # For struct data
         
         Y = regress_out(Y,conf)
     if normalise:
