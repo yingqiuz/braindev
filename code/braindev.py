@@ -30,9 +30,12 @@ def prepare(df,name=None,Y=None,deconfound=None,normalise=True,exclude=None):
     s = np.array(df['age_scan'][~nan_check])
     if deconfound is not None:
         # Confounds
-        conf = np.array(df[deconfound])  # For struct data
+        nan_check = np.isnan(np.array(df[deconfound]))
+        conf = np.array(df[[deconfound]])  # For struct data
         
-        Y = regress_out(Y,conf)
+        Y = regress_out(Y[~nan_check],conf[~nan_check])
+        b = np.array(df['age_birth'][~nan_check])
+        s = np.array(df['age_scan'][~nan_check])
     if normalise:
         # Normalise to 95th percentile
         Y = Y/np.quantile(Y,.95,axis=0)*100  
