@@ -81,6 +81,21 @@ def forward_3(p,t_birth,t_scan):
     
     return pred
 
+# models that take in squareroot of t
+def forward_4(p,t_birth,t_scan):
+    beta0, beta1, t_onset = p
+    return beta0*(t_birth-t_onset)**2+beta1*(t_scan-t_birth)**2
+
+# Post-birth slope is different
+def forward_5(p,t_birth,t_scan):
+    beta0, beta1_term, beta1_prem, t_onset = p
+    
+    term = t_birth>=prem_thresh
+    prem = t_birth<prem_thresh
+    
+    pred = np.zeros(t_scan.size)
+    pred[term] = beta0*(t_birth[term]-t_onset)**2+beta1_term*(t_scan[term]-t_birth[term])**2
+    pred[prem] = beta0*(t_birth[prem]-t_onset)**2+beta1_prem*(t_scan[prem]-t_birth[prem])**2
 
 models_list = [ 
     {
@@ -103,13 +118,26 @@ models_list = [
         'bounds'  : ([-np.inf,-np.inf,-np.inf,0],[np.inf,np.inf,np.inf,40.0]),
         'init'    : [0,0,0,0.00001]
     },
-    
     {
         'forward' :forward_3, 
         'params'  : ['beta0-term','beta1-term','beta0-prem','beta1-prem','onset'], 
         'bounds'  : ([-np.inf,-np.inf,-np.inf,-np.inf,0],[ np.inf, np.inf, np.inf, np.inf,40]),
         'init'    : [0,0,0,0,0.00001]
-    }
+    },
+
+    {
+        'forward' : forward_4, 
+        'params'  : ['beta0','t_onset'] , 
+        'bounds'  : ([-np.inf,0],[np.inf,40.0]),
+        'init'    : [0,0.00001]
+    },
+    {
+        'forward' :forward_5, 
+        'params'  : ['beta0','beta1','t_onset'], 
+        'bounds'  : ([-np.inf,-np.inf,0],[np.inf,np.inf,40.0]), 
+        'init'    : [0,0,0.00001]
+        
+    },
 ]
                
 
@@ -130,10 +158,10 @@ class ForwardModel:
     
     def get_params(self,params,group):
         onset = params[-1] #np.mean(samples[:,-1],axis=0)
-        if self.modelid == 1:
+        if self.modelid in [1, 4]:
             beta0 = params[0] #np.mean(samples[:,0],axis=0)
             beta1 = params[1] #np.mean(samples[:,1],axis=0)
-        if self.modelid == 2:        
+        if self.modelid in [2, 5]:        
             beta0 = params[0] #np.mean(samples[:,0],axis=0)
             if group == 'term':
                 beta1 = params[1] #np.mean(samples[:,1],axis=0)
@@ -146,7 +174,6 @@ class ForwardModel:
             else:
                 beta0 = params[2] #np.mean(samples[:,2],axis=0)
                 beta1 = params[3] #np.mean(samples[:,3],axis=0)
-   
         return beta0,beta1,onset
 
         
